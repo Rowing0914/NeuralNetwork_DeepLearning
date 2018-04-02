@@ -1,8 +1,3 @@
-"""
-following this repo
-https://github.com/dennybritz/reinforcement-learning
-"""
-
 import numpy as np
 np.random.seed(42)
 import random
@@ -13,7 +8,11 @@ class Network():
         self.sizes = sizes
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
         self.weights = [np.random.randn(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
+        self.historyOfLearning = []
 
+    def saveHistoryOfLearning(self, error):
+        self.historyOfLearning.append(error)
+        
     def showParams(self):
         print("number of layers: ", self.num_layers)
         print("size of network: ", self.sizes)
@@ -24,8 +23,8 @@ class Network():
         print("number of layers: ", self.num_layers)
         print("size of network: ", self.sizes)
         for i, (b, w) in enumerate(zip(self.biases, self.weights)):
-            print("the size of biase for {0} layer: {1}".format(i+2, len(b)))
-            print("the size of weight for {0} layer: {1}".format(i+2, len(w)))
+            print("the size of biase for {0} layer: {1}".format(i+2, b.shape))
+            print("the size of weight for {0} layer: {1}".format(i+2, w.shape))
 
     def sigmoid(z):
         return 1.0 / (1.0 + np.exp(-z))
@@ -121,6 +120,7 @@ class Network():
         our case, cost func is C = (1/2)(\sum||output - target||^2)
         Hence, nabla_C = (output - target)
         """
+        self.saveHistoryOfLearning(output_activations - y)
         return (output_activations - y)
 
 if __name__ == '__main__':
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     import mnist_loader
     training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
 
-    net = Network([784, 30, 10])
+    net = Network([784, 30, 20, 10])
 
     print(net.SGD(training_data, 1, 10, 3.0, test_data=test_data))
     net.showSizeOfParams()
