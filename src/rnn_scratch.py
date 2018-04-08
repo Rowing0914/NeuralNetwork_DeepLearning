@@ -1,5 +1,5 @@
 import copy, numpy as np
-np.random.seed(0)
+np.random.seed(32)
 
 # compute sigmoid nonlinearity
 def sigmoid(x):
@@ -11,18 +11,18 @@ def sigmoid_output_to_derivative(output):
     return output*(1-output)
 
 
-# training dataset generation
+# binary dictionary, like {key : 1, value : binaryFormatOf(1)}
 int2binary = {}
 binary_dim = 8
 
 largest_number = pow(2,binary_dim)
-binary = np.unpackbits(
-    np.array([range(largest_number)],dtype=np.uint8).T,axis=1)
+
+# np.unpackbits is converting the integer(np.unit8) into binary format
+binary = np.unpackbits(np.array([range(largest_number)],dtype=np.uint8).T,axis=1)
 for i in range(largest_number):
     int2binary[i] = binary[i]
 
-
-# input variables
+# define learning rate and network architecture manually
 alpha = 0.1
 input_dim = 2
 hidden_dim = 16
@@ -39,27 +39,28 @@ synapse_1_update = np.zeros_like(synapse_1)
 synapse_h_update = np.zeros_like(synapse_h)
 
 # training logic
-for j in range(10000):
+for j in range(100000):
     
     # generate a simple addition problem (a + b = c)
     a_int = np.random.randint(largest_number/2) # int version
-    a = int2binary[a_int] # binary encoding
+    a = int2binary[a_int] # lookup binary dictionary
 
     b_int = np.random.randint(largest_number/2) # int version
-    b = int2binary[b_int] # binary encoding
+    b = int2binary[b_int] # lookup binary dictionary
 
     # true answer
     c_int = a_int + b_int
-    c = int2binary[c_int]
+    c = int2binary[c_int] # lookup binary dictionary
     
-    # where we'll store our best guess (binary encoded)
+    # where we'll store our prediction (binary encoded)
     d = np.zeros_like(c)
 
     overallError = 0
-    
+    # Network has only 3 layers
     layer_2_deltas = list()
     layer_1_values = list()
     layer_1_values.append(np.zeros(hidden_dim))
+    X_prev = np.array(np.zeros_like(a[0],b[0]))
     
     # moving along the positions in the binary encoding
     for position in range(binary_dim):
@@ -69,12 +70,13 @@ for j in range(10000):
         y = np.array([[c[binary_dim - position - 1]]]).T
 
         # hidden layer (input ~+ prev_hidden)
-        layer_1 = sigmoid(np.dot(X,synapse_0) + np.dot(layer_1_values[-1],synapse_h))
+        norm = X - X_prev
+        layer_1 = sigmoid(np.dot(X,synapse_0) + np.dot(layer_1_values[-1],synapse_h)*np.log(np.linalg.norm(norm)))
 
         # output layer (new binary representation)
         layer_2 = sigmoid(np.dot(layer_1,synapse_1))
 
-        # did we miss?... if so, by how much?
+        # error caluculation
         layer_2_error = y - layer_2
         layer_2_deltas.append((layer_2_error)*sigmoid_output_to_derivative(layer_2))
         overallError += np.abs(layer_2_error[0])
@@ -84,6 +86,7 @@ for j in range(10000):
         
         # store hidden layer so we can use it in the next timestep
         layer_1_values.append(copy.deepcopy(layer_1))
+        X_prev = X
     
     future_layer_1_delta = np.zeros(hidden_dim)
     
@@ -117,6 +120,8 @@ for j in range(10000):
     # print out progress
     if(j % 1000 == 0):
         print "Error:" + str(overallError)
+        print "A  :",a
+        print "B  :",b
         print "Pred:" + str(d)
         print "True:" + str(c)
         out = 0
